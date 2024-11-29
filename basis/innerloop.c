@@ -11,10 +11,9 @@
 
 
 //  ----------------------- Variable ------------------------------------
-float output_last;
-float error_last;
+
 float Ta;
-float integrator;
+
 
 PI_ControllerState id_ControllerState;
 
@@ -29,9 +28,7 @@ void abc_dq_trans(float in_a, float in_b, float in_c, float gamma, double *out_d
 void init_var_svm()
 {
     // alte Zustände zurücksetzen
- output_last = 0;
- error_last = 0;
-    integrator = 0;
+
  Ta = 2.000000000000000e-04; //this is discretization system and this is the period
     init_var(1/Ta);
 }
@@ -65,11 +62,11 @@ float PI_controller(float error, float kp, float ki, float output_min, float out
 
     // Compute the integral term
 
-    integrator += ki * Ta * error;
+    state->integrator += ki * Ta * error;
 
     // Combine proportional and integral terms
 
-    output = proportional + integrator;
+    output = proportional + state->integrator;
 
     // Apply output limits
 
@@ -89,13 +86,13 @@ float PI_controller(float error, float kp, float ki, float output_min, float out
 
     float feedback_correction = KAW * (output - output_limited);
 
-    integrator -= feedback_correction * Ta;  // Adjust the integrator to prevent windup
+    state->integrator -= feedback_correction * Ta;  // Adjust the integrator to prevent windup
 
     // Update states
 
-    output_last = output_limited;
+    state->output_last = output_limited;
 
-    error_last = error;
+    state->error_last = error;
 
     return output_limited;
 
