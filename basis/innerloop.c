@@ -16,6 +16,7 @@ float error_last;
 float Ta;
 float integrator;
 
+PI_ControllerState id_ControllerState;
 
 void init_var(float fsa);
 void abc_dq_trans(float in_a, float in_b, float in_c, float gamma, double *out_d, double *out_q);
@@ -44,17 +45,17 @@ float innerloop(double *idq_ref, float kp, float ki, float *v_output, float u_ma
      double i_d_fdb, i_q_fdb;
     abc_dq_trans(i_abc[0], i_abc[1], i_abc[2],gamma, &i_d_fdb, &i_q_fdb);
     double error = idq_ref[0] - i_d_fdb;
-    float output = PI_controller(error, kp, ki, -u_max, u_max, KAW);
-    v_output[0] = output;
+    
+    v_output[0] =  PI_controller(error, kp, ki, -u_max, u_max, KAW,&id_ControllerState);
     //PI controller for q axis to be added, 
     //may need struct to distinguish the integrator,error_last,output_last value of d and q axis 
-    return output;
+    return 0;
 
 }
 
 // PI Controller function with anti-windup
 
-float PI_controller(float error, float kp, float ki, float output_min, float output_max, float KAW) {
+float PI_controller(float error, float kp, float ki, float output_min, float output_max, float KAW,PI_ControllerState *state) {
 
     float output = 0;
 
