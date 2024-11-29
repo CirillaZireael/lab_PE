@@ -16,4 +16,4 @@ float Ta;
 
 void init_var_svm();
 float PI_controller(float error, float kp, float ki, float output_min, float output_max, float KAW);
-float innerloop(float error, float kp, float ki, float output_min, float output_max, float KAW);
+float innerloop(float i_ref, float kp, float ki, float output_min, float output_max, float KAW,float gamma,float i_abc);

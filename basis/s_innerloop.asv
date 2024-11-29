@@ -6,21 +6,20 @@ Purpose:  C-mex s-function
           Implementation of SVM (Space Vector Modulation)
 
 ----------------------------------------------------------------------+
-Channel        Value       [Dimension]    Description           
-----------------------------------------------------------------------
-Inputs:  
-   1           id_ref         [1]         Reference current for d axis   
-   2           i_abc          [1]         Feedback current in abc frame
-   3           gamma          [1]         Angle of reference space vector [0, 2*PI]
+ *               Channel        Value     [Dimension]     Description           
+ * Inputs:        1             id_ref         [1]         refrence current for d axis 
+ *                2             i_abc     [1]          feedback current in abc frame
+ *                3             gamma        [1]          Angle of reference space vector [0, 2*PI]
 
 Block parameter input:
-   1           f_takt         [1]         Clock frequency
-   2           f_sw           [1]         Switching frequency
+ *               1              f_takt       [1]         Clock frequency
+ *               2              f_sw         [1]         Switching frequency
          
-Output:  
-   1           pulse1         [1]         Control signal Phase 1
-   2           pulse2         [1]         Control signal Phase 2
-   3           pulse3         [1]         Control signal Phase 3    
+
+Output:         Channel        Value
+ *              1               pulse1       [1]         Control signal Phase 1
+ *              2               pulse2       [1]         Control signal Phase 2
+ *              3               pulse3       [1]         Control signal Phase 3
 
 
 Compile:    mex s_innerloop.c
@@ -37,9 +36,9 @@ Date:    ID:   Description:
 
 #define NO_OF_PARAMETERS     6
 #define NO_OF_INPUTS         3
-#define NO_OF_INPUTS_PORT0   1    // id_ref refrence current for d axis 
-#define NO_OF_INPUTS_PORT1   1    // i_abc feedback current in abc frame
-#define NO_OF_INPUTS_PORT2   1    //gamma Angle of reference space vector [0, 2*PI]
+#define NO_OF_INPUTS_PORT0   1    // u_dc
+#define NO_OF_INPUTS_PORT1   1    // |u_soll|
+#define NO_OF_INPUTS_PORT2   1    //gamma
 #define NO_OF_OUTPUTS        3
 #define NO_OF_OUTPUTS_PORT0  1   // pulse phase 1
 #define NO_OF_OUTPUTS_PORT1  1   // pulse phase 2
@@ -47,12 +46,12 @@ Date:    ID:   Description:
 
 // Blockparameter einlesen
 
-#define f_takt     *(mxGetPr(ssGetSFcnParam(S,0)))         //  Clock frequency
-#define f_sw       *(mxGetPr(ssGetSFcnParam(S,1)))         // Switching frequency
-#define cc_kp       *(mxGetPr(ssGetSFcnParam(S,2)))         // parameter Kp for current loop
-#define cc_kaw       *(mxGetPr(ssGetSFcnParam(S,3)))         // parameter Kaw for antiwindup
-#define u_max       *(mxGetPr(ssGetSFcnParam(S,4)))         // voltage limit
-#define cc_ki       *(mxGetPr(ssGetSFcnParam(S,5)))         // parameter Ki for current loop
+#define f_takt     *(mxGetPr(ssGetSFcnParam(S,0)))         // Taktfrequenz
+#define f_sw       *(mxGetPr(ssGetSFcnParam(S,1)))         // Schaltfrequenz
+#define cc_kp       *(mxGetPr(ssGetSFcnParam(S,2)))         // Schaltfrequenz
+#define cc_kaw       *(mxGetPr(ssGetSFcnParam(S,3)))         // Schaltfrequenz
+#define u_max       *(mxGetPr(ssGetSFcnParam(S,4)))         // Schaltfrequenz
+#define cc_ki       *(mxGetPr(ssGetSFcnParam(S,5)))         // Schaltfrequenz
 
 // Konstanten definieren
 
@@ -96,7 +95,7 @@ static void mdlInitializeSizes(SimStruct *S)
    if (!ssSetNumOutputPorts(S, NO_OF_OUTPUTS)) return;
    ssSetOutputPortWidth(S, 0, NO_OF_OUTPUTS_PORT0);     
    ssSetOutputPortWidth(S, 1, NO_OF_OUTPUTS_PORT1); 
-   ssSetOutputPortWidth(S, 2, NO_OF_OUTPUTS_PORT2);  // f�r jeden Output-Channel
+   ssSetOutputPortWidth(S, 2, NO_OF_OUTPUTS_PORT2);  // für jeden Output-Channel
 
 
 
@@ -111,7 +110,7 @@ static void mdlInitializeSizes(SimStruct *S)
    init_var_svm((f_takt), (f_sw));
 }
 
-// Define Discrete Execution Time
+// Diskrete Durchführungszeit definieren
 static void mdlInitializeSampleTimes(SimStruct *S)
 {
    // Sample time 
@@ -127,20 +126,17 @@ static void mdlOutputs(SimStruct *S, int_T tid)
    real_T  *pulse2    = ssGetOutputPortRealSignal(S,1);  //  Phase 2
    real_T  *pulse3    = ssGetOutputPortRealSignal(S,2);  //  Phase 3
    // Definition input   
-   InputRealPtrsType id_ref          = ssGetInputPortRealSignalPtrs(S, 0); // id_ref refrence current for d axis 
+   InputRealPtrsType id_ref          = ssGetInputPortRealSignalPtrs(S, 0); // 
    InputRealPtrsType i_abc =  ssGetInputPortRealSignalPtrs(S, 1); // current in abc frame
-   InputRealPtrsType gamma         = ssGetInputPortRealSignalPtrs(S, 2); // Angle of reference space vector [0, 2*PI]
+   InputRealPtrsType gamma         = ssGetInputPortRealSignalPtrs(S, 2); // 
  
    real_T out_svm[3] = {0,0,0};
    
    //real_T Is_B = *Is_AB1[1];
    
-//=========================================================================================
+   
    //innnerloop output - d axis voltage  
    out_svm[0] = innerloop(*id_ref[0],cc_kp,cc_ki,-u_max,u_max,cc_kaw,*gamma[0],*i_abc[0]);
-
-//=========================================================================================
-
 
    pulse1[0]   = out_svm[0];      // output
    pulse2[0]   = out_svm[1];
