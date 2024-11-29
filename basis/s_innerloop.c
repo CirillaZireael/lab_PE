@@ -10,7 +10,7 @@ Channel        Value       [Dimension]    Description
 ----------------------------------------------------------------------
 Inputs:  
    1           id_ref         [1]         Reference current for d axis   
-   2           i_abc          [1]         Feedback current in abc frame
+   2           i_abc          [3]         Feedback current in abc frame
    3           gamma          [1]         Angle of reference space vector [0, 2*PI]
 
 Block parameter input:
@@ -38,7 +38,7 @@ Date:    ID:   Description:
 #define NO_OF_PARAMETERS     6
 #define NO_OF_INPUTS         3
 #define NO_OF_INPUTS_PORT0   1    // id_ref refrence current for d axis 
-#define NO_OF_INPUTS_PORT1   1    // i_abc feedback current in abc frame
+#define NO_OF_INPUTS_PORT1   3    // i_abc feedback current in abc frame
 #define NO_OF_INPUTS_PORT2   1    //gamma Angle of reference space vector [0, 2*PI]
 #define NO_OF_OUTPUTS        3
 #define NO_OF_OUTPUTS_PORT0  1   // pulse phase 1
@@ -137,7 +137,7 @@ static void mdlOutputs(SimStruct *S, int_T tid)
    
 //=========================================================================================
    //innnerloop output - d axis voltage  
-   out_svm[0] = innerloop(*id_ref[0],cc_kp,cc_ki,-u_max,u_max,cc_kaw,*gamma[0],*i_abc[0]);
+   out_svm[0] = innerloop(*id_ref[0],cc_kp,cc_ki,-u_max,u_max,cc_kaw,*gamma[0],i_abc);
 
 //=========================================================================================
 
