@@ -9,8 +9,8 @@ Purpose:  C-mex s-function
 Channel        Value       [Dimension]    Description           
 ----------------------------------------------------------------------
 Inputs:  
-   1           id_ref         [1]         Reference current for d axis   
-   2           i_abc          [3]         Feedback current in abc frame
+   1           idq_ref         [2]         Reference current for d axis   
+   2           i_abc          [1]         Feedback current in abc frame
    3           gamma          [1]         Angle of reference space vector [0, 2*PI]
 
 Block parameter input:
@@ -37,7 +37,7 @@ Date:    ID:   Description:
 
 #define NO_OF_PARAMETERS     6
 #define NO_OF_INPUTS         3
-#define NO_OF_INPUTS_PORT0   1    // id_ref refrence current for d axis 
+#define NO_OF_INPUTS_PORT0   2    // idq_ref refrence current for dq axis 
 #define NO_OF_INPUTS_PORT1   3    // i_abc feedback current in abc frame
 #define NO_OF_INPUTS_PORT2   1    //gamma Angle of reference space vector [0, 2*PI]
 #define NO_OF_OUTPUTS        3
@@ -127,17 +127,20 @@ static void mdlOutputs(SimStruct *S, int_T tid)
    real_T  *pulse2    = ssGetOutputPortRealSignal(S,1);  //  Phase 2
    real_T  *pulse3    = ssGetOutputPortRealSignal(S,2);  //  Phase 3
    // Definition input   
-   InputRealPtrsType id_ref          = ssGetInputPortRealSignalPtrs(S, 0); // id_ref refrence current for d axis 
+   InputRealPtrsType idq_ref          = ssGetInputPortRealSignalPtrs(S, 0); // id_ref refrence current for d axis 
    InputRealPtrsType i_abc =  ssGetInputPortRealSignalPtrs(S, 1); // current in abc frame
    InputRealPtrsType gamma         = ssGetInputPortRealSignalPtrs(S, 2); // Angle of reference space vector [0, 2*PI]
  
    real_T out_svm[3] = {0,0,0};
    
    //real_T Is_B = *Is_AB1[1];
+    float v_output[2];
    
 //=========================================================================================
    //innnerloop output - d axis voltage  
-   out_svm[0] = innerloop(*id_ref[0],cc_kp,cc_ki,-u_max,u_max,cc_kaw,*gamma[0],i_abc);
+   innerloop(*idq_ref,cc_kp,cc_ki,v_output,u_max,cc_kaw,*gamma[0],*i_abc);
+   out_svm[0] = v_output[0];
+   out_svm[1] = v_output[1];
 
 //=========================================================================================
 

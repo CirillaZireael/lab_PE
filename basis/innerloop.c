@@ -39,13 +39,15 @@ void init_var_svm()
 
 // Innerloop PID
 
-float innerloop(float i_ref, float kp, float ki, float output_min, float output_max, float KAW,float gamma,double *i_abc) {
+float innerloop(double *idq_ref, float kp, float ki, float *v_output, float u_max, float KAW,float gamma,double *i_abc) {
 
      double i_d_fdb, i_q_fdb;
     abc_dq_trans(i_abc[0], i_abc[1], i_abc[2],gamma, &i_d_fdb, &i_q_fdb);
-    double error = i_ref - i_d_fdb;
-    float output = PI_controller(error, kp, ki, output_min, output_max, KAW);
-
+    double error = idq_ref[0] - i_d_fdb;
+    float output = PI_controller(error, kp, ki, -u_max, u_max, KAW);
+    v_output[0] = output;
+    //PI controller for q axis to be added, 
+    //may need struct to distinguish the integrator,error_last,output_last value of d and q axis 
     return output;
 
 }
