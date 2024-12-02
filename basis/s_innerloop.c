@@ -36,12 +36,12 @@ Date:    ID:   Description:
 
 
 #define NO_OF_PARAMETERS     6
-#define NO_OF_INPUTS         5
+#define NO_OF_INPUTS         3
 #define NO_OF_INPUTS_PORT0   2    // idq_ref refrence current for dq axis 
 #define NO_OF_INPUTS_PORT1   3    // i_abc feedback current in abc frame
-#define NO_OF_INPUTS_PORT2   1    //gamma Angle of reference space vector [0, 2*PI]
-#define NO_OF_INPUTS_PORT3   1
-#define NO_OF_INPUTS_PORT4   1
+#define NO_OF_INPUTS_PORT2   3    //gamma Angle of reference space vector [0, 2*PI]
+//#define NO_OF_INPUTS_PORT3   1
+//#define NO_OF_INPUTS_PORT4   1
 #define NO_OF_OUTPUTS        3
 #define NO_OF_OUTPUTS_PORT0  1   // pulse phase 1
 #define NO_OF_OUTPUTS_PORT1  1   // pulse phase 2
@@ -86,8 +86,8 @@ static void mdlInitializeSizes(SimStruct *S)
     ssSetInputPortWidth(S, 0, NO_OF_INPUTS_PORT0);
     ssSetInputPortWidth(S, 1, NO_OF_INPUTS_PORT1);
     ssSetInputPortWidth(S, 2, NO_OF_INPUTS_PORT2);
-    ssSetInputPortWidth(S, 3, NO_OF_INPUTS_PORT3);
-    ssSetInputPortWidth(S, 4, NO_OF_INPUTS_PORT4);
+    //ssSetInputPortWidth(S, 3, NO_OF_INPUTS_PORT3);
+    //ssSetInputPortWidth(S, 4, NO_OF_INPUTS_PORT4);
 
 
    // Specifies the direct feedthrough status of the ports (in this case
@@ -95,16 +95,16 @@ static void mdlInitializeSizes(SimStruct *S)
     ssSetInputPortDirectFeedThrough(S, 0, 1);
     ssSetInputPortDirectFeedThrough(S, 1, 1);
     ssSetInputPortDirectFeedThrough(S, 2, 1);
-    ssSetInputPortDirectFeedThrough(S, 3, 1);
-    ssSetInputPortDirectFeedThrough(S, 4, 1);
+    //ssSetInputPortDirectFeedThrough(S, 3, 1);
+    //ssSetInputPortDirectFeedThrough(S, 4, 1);
     
     
    if (!ssSetNumOutputPorts(S, NO_OF_OUTPUTS)) return;
    ssSetOutputPortWidth(S, 0, NO_OF_OUTPUTS_PORT0);     
    ssSetOutputPortWidth(S, 1, NO_OF_OUTPUTS_PORT1); 
    ssSetOutputPortWidth(S, 2, NO_OF_OUTPUTS_PORT2);  // für jeden Output-Channel
-   ssSetOutputPortWidth(S, 3, NO_OF_OUTPUTS_PORT1); 
-   ssSetOutputPortWidth(S, 4, NO_OF_OUTPUTS_PORT1); 
+   //ssSetOutputPortWidth(S, 3, NO_OF_OUTPUTS_PORT1); 
+   //ssSetOutputPortWidth(S, 4, NO_OF_OUTPUTS_PORT1); 
 
 
    // Specifies the number of sample times:
@@ -136,17 +136,19 @@ static void mdlOutputs(SimStruct *S, int_T tid)
    // Definition input   
    InputRealPtrsType idq_ref          = ssGetInputPortRealSignalPtrs(S, 0); // id_ref refrence current for d axis 
    InputRealPtrsType i_abc =  ssGetInputPortRealSignalPtrs(S, 1); // current in abc frame
-   InputRealPtrsType gamma         = ssGetInputPortRealSignalPtrs(S, 2); // Angle of reference space vector [0, 2*PI]
-   InputRealPtrsType psi_Rd         = ssGetInputPortRealSignalPtrs(S, 3); // Angle of reference space vector [0, 2*PI]
+   InputRealPtrsType data         = ssGetInputPortRealSignalPtrs(S, 2); // Angle of reference space vector [0, 2*PI]
+   //InputRealPtrsType psi_Rd         = ssGetInputPortRealSignalPtrs(S, 3); // Angle of reference space vector [0, 2*PI]
    //InputRealPtrsType n_M         = ssGetInputPortRealSignalPtrs(S, 4); // Angle of reference space vector [0, 2*PI]
 
  
    real_T out_svm[3] = {0,0,0};
 //=========================================================================================   
     float v_output[2];
-   
+   double gamma = *data[0];
+    double psi_Rd = *data[1];
+    double n_M = *data[2];
    //innnerloop output - d axis voltage  
-   innerloop(*idq_ref,cc_kp,cc_ki,v_output,u_max,cc_kaw,*gamma[0],*i_abc);
+   innerloop(*idq_ref,cc_kp,cc_ki,v_output,u_max,cc_kaw,gamma,*i_abc,psi_Rd,n_M);
    out_svm[0] = v_output[0];
    out_svm[1] = v_output[1];
 
