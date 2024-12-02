@@ -21,5 +21,5 @@ typedef struct {
 } PI_ControllerState;
 
 void init_var_svm();
-float PI_controller(float error, float kp, float ki, float output_min, float output_max, float KAW,PI_ControllerState *state);
-float innerloop(double *idq_ref, float kp, float ki, float *v_output, float output_max, float KAW,float gamma,double *i_abc);
+float PI_controller(float error, float kp, float ki, float output_min, float output_max, float KAW,PI_ControllerState *state, double U_decoupling);
+float innerloop(double *idq_ref, float kp, float ki, float *v_output, float output_max, float KAW,float gamma,double *i_abc,double Psi_Rd,double n_M);
