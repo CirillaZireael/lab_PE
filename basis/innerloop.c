@@ -13,6 +13,12 @@
 //  ----------------------- Variable ------------------------------------
 
 float Ta;
+double ASM_p; 
+double ASM_Rr;
+double ASM_Lh;
+double ASM_Lr;
+double ASM_sigma;
+double ASM_Ls;
 
 
 PI_ControllerState id_ControllerState;
@@ -21,6 +27,7 @@ PI_ControllerState iq_ControllerState;
 
 void init_var(float fsa);
 void abc_dq_trans(float in_a, float in_b, float in_c, float gamma, double *out_d, double *out_q);
+void decoupling(double I_d,double I_q,double Psi_Rd,double omega_M,double* U_Sd_ent, double* U_Sq_ent);
         
 //  ----------------------------------------------------------------------
 
@@ -32,22 +39,31 @@ void init_var_svm()
     // alte Zustände zurücksetzen
 
  Ta = 2.000000000000000e-04; //this is discretization system and this is the period
+     ASM_p = 1.0;
+     ASM_Rr = 1.6;
+     ASM_Lh = 0.4040;
+     ASM_Lr = 0.4131;
+     ASM_sigma = 0.0433;
+     ASM_Ls = 0.4131;
     init_var(1/Ta);
 }
 
 //  ----------------------------------------------------------------------
 
-// Innerloop PID
+// Innerloop controller
 
 float innerloop(double *idq_ref, float kp, float ki, float *v_output, float u_max, float KAW,float gamma,double *i_abc) {
 
-     double i_d_fdb, i_q_fdb;
-    abc_dq_trans(i_abc[0], i_abc[1], i_abc[2],gamma, &i_d_fdb, &i_q_fdb);
+    double i_d_fdb, i_q_fdb;
+    abc_dq_trans(i_abc[0], i_abc[1], i_abc[2],gamma, &i_d_fdb, &i_q_fdb); //park transformation
+
+    double U_Sd_ent, U_Sq_ent;
+    //decoupling(idq_ref[0],idq_ref[1],double Psi_Rd,double omega_M,&U_Sd_ent,&U_Sq_ent);
+
     double error = idq_ref[0] - i_d_fdb;
-    
-    v_output[0] =  PI_controller(error, kp, ki, -u_max, u_max, KAW,&id_ControllerState);
+    v_output[0] =  PI_controller(error, kp, ki, -u_max, u_max, KAW, &id_ControllerState);
     error = idq_ref[1] - i_q_fdb;
-    v_output[1] =  PI_controller(error, kp, ki, -u_max, u_max, KAW,&iq_ControllerState);
+    v_output[1] =  PI_controller(error, kp, ki, -u_max, u_max, KAW, &iq_ControllerState);
 
     //PI controller for q axis to be added, 
     //may need struct to distinguish the integrator,error_last,output_last value of d and q axis 
@@ -73,7 +89,12 @@ float PI_controller(float error, float kp, float ki, float output_min, float out
 
     output = proportional + state->integrator;
 
-    // Apply output limits
+
+    //----------decoupling-------------
+
+
+
+    // -------Apply output limits------------
 
     float output_limited = output;
 
@@ -133,4 +154,14 @@ void abc_dq_trans(float in_a, float in_b, float in_c, float gamma, double *out_d
            sinGamma = sin(gamma);
            *out_d = in_alpha * cosGamma + in_beta  * sinGamma;
            *out_q = in_beta  * cosGamma - in_alpha * sinGamma; 
+}
+
+void decoupling(double I_d,double I_q,double Psi_Rd,double omega_M,double* U_Sd_ent, double* U_Sq_ent){
+     *U_Sd_ent = ASM_sigma * ASM_Ls * 
+                (-ASM_p * omega_M * I_q - (ASM_Rr * ASM_Lh) / ASM_Lr / Psi_Rd * pow(I_q, 2)) 
+                - Psi_Rd * ASM_Rr * ASM_Lh / pow(ASM_Lr, 2);
+
+    *U_Sq_ent = ASM_sigma * ASM_Ls * 
+                (-ASM_p * omega_M * I_d + (ASM_Rr * ASM_Lh) / ASM_Lr / Psi_Rd * I_q * I_d) 
+                - ASM_p * omega_M * Psi_Rd * ASM_Lh / ASM_Lr;
 }
