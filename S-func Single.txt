@@ -1,0 +1,144 @@
+// filename: sfunc_single.c
+/*-----------------------------------------------------------------------------------
+ * Purpose: Implements a single S-function combining speed, flux, and torque models
+ *-----------------------------------------------------------------------------------
+ */
+
+// Inputs:
+* n_ref: [1] (reference speed)
+* n_m: [1] (measured speed of ASM)
+* i_Sabc: [3] (measured three-phase currents)
+
+// Block parameters:
+* f_a: [1] (sampling frequency)
+* CC_KP, CC_KI, CC_KAW: [1] (PI gains for current control)
+* SC_KP, SC_KI, SC_KAW: [1] (PI gains for speed control)
+
+// Outputs:
+* MagUsRef: [1] (magnitude of ASM/inverter input voltage)
+* PhaseUsRef: [1] (phase of ASM/inverter input voltage)
+* flux: [1] (estimated flux)
+* dq_ref currents: [2] (reference currents for d and q components)
+* dq currents: [2] (actual d and q currents)
+
+// Compile command:
+mex sfunc_single.c fluxmodel.c speedandfluxcontroller.c transformations.c currentcontroller.c
+
+/*-----------------------------------------------------------------------------------
+ * Defining global constants for the general S-function structure:
+ *-----------------------------------------------------------------------------------
+ */
+#define S_FUNCTION_NAME sfunc_single
+#define S_FUNCTION_LEVEL 2
+
+#define NO_OF_PARAMETERS 10
+#define NO_OF_INPUTS 3
+#define NO_OF_OUTPUTS 5
+
+#define f_a *(mxGetPr(ssGetSFcnParam(S, 0)))
+#define KP_CC *(mxGetPr(ssGetSFcnParam(S, 1)))
+#define KI_CC *(mxGetPr(ssGetSFcnParam(S, 2)))
+#define KAW_CC *(mxGetPr(ssGetSFcnParam(S, 3)))
+#define KP_SC *(mxGetPr(ssGetSFcnParam(S, 4)))
+#define KI_SC *(mxGetPr(ssGetSFcnParam(S, 5)))
+#define KAW_SC *(mxGetPr(ssGetSFcnParam(S, 6)))
+
+#include <stdio.h>
+#include <math.h>
+#include "simstruc.h"
+#include "definitions.h"
+#include "transformations.h"
+#include "fluxmodel.h"
+#include "speedandfluxcontroller.h"
+#include "currentcontroller.h"
+
+/*-----------------------------------------------------------------------------------
+ * Necessary function for the general S-function structure:
+ *-----------------------------------------------------------------------------------
+ */
+static void mdlInitializeSizes(SimStruct *S) {
+    if (ssGetNumSFcnParams(S) != NO_OF_PARAMETERS) return;
+
+    ssSetNumContStates(S, 0);
+    ssSetNumDiscStates(S, 0);
+
+    if (!ssSetNumInputPorts(S, NO_OF_INPUTS)) return;
+    ssSetInputPortWidth(S, 0, 1);
+    ssSetInputPortWidth(S, 1, 1);
+    ssSetInputPortWidth(S, 2, 3);
+
+    if (!ssSetNumOutputPorts(S, NO_OF_OUTPUTS)) return;
+    ssSetOutputPortWidth(S, 0, 1);
+    ssSetOutputPortWidth(S, 1, 1);
+    ssSetOutputPortWidth(S, 2, 1);
+    ssSetOutputPortWidth(S, 3, 2);
+    ssSetOutputPortWidth(S, 4, 2);
+
+    ssSetNumSampleTimes(S, 1);
+}
+
+/*-----------------------------------------------------------------------------------
+ * Initialize sampling times for the S-function
+ *-----------------------------------------------------------------------------------
+ */
+static void mdlInitializeSampleTimes(SimStruct *S) {
+    ssSetSampleTime(S, 0, 1 / f_a);
+    ssSetOffsetTime(S, 0, 0);
+}
+
+/*-----------------------------------------------------------------------------------
+ * Compute outputs of the S-function
+ *-----------------------------------------------------------------------------------
+ */
+static void mdlOutputs(SimStruct *S, int_T tid) {
+    // Outputs
+    real_T *MagUsRef_out = ssGetOutputPortRealSignal(S, 0);
+    real_T *PhaseUsRef_out = ssGetOutputPortRealSignal(S, 1);
+    real_T *flux_out = ssGetOutputPortRealSignal(S, 2);
+    real_T *dq_ref_out = ssGetOutputPortRealSignal(S, 3);
+    real_T *dq_out = ssGetOutputPortRealSignal(S, 4);
+
+    // Inputs
+    InputRealPtrsType n_ref = ssGetInputPortRealSignalPtrs(S, 0);
+    InputRealPtrsType n_m = ssGetInputPortRealSignalPtrs(S, 1);
+    InputRealPtrsType i_Sabc = ssGetInputPortRealSignalPtrs(S, 2);
+
+    // Local variables
+    real_T n_ref_val = *n_ref[0];
+    real_T n_m_val = *n_m[0];
+    real_T i_Sa = *i_Sabc[0];
+    real_T i_Sb = *i_Sabc[1];
+    real_T i_Sc = *i_Sabc[2];
+    real_T iSd_ref, iSq_ref, iSd, iSq, psi_RA_est, U_ref_d, U_ref_q;
+
+    // Flux model
+    fluxmodel(i_Sa, i_Sb, i_Sc, n_m_val, &U_ref_d, &U_ref_q, &psi_RA_est, &MagUsRef_out[0]);
+
+    // Outer control loop
+    outerControlLoop(psi_RA_est, n_ref_val, n_m_val, &iSd_ref, &iSq_ref);
+
+    // dq-transformation
+    abc_dq_trans(i_Sa, i_Sb, i_Sc, U_ref_d, &iSd, &iSq);
+
+    // Inner control loop
+    currentcontroller(iSd_ref, iSq_ref, iSd, iSq, psi_RA_est, n_m_val, &U_ref_d, &U_ref_q);
+
+    // Output assignments
+    PhaseUsRef_out[0] = atan2(U_ref_q, U_ref_d);
+    dq_ref_out[0] = iSd_ref;
+    dq_ref_out[1] = iSq_ref;
+    dq_out[0] = iSd;
+    dq_out[1] = iSq;
+}
+
+/*-----------------------------------------------------------------------------------
+ * Terminate the S-function (no memory to free in this implementation)
+ *-----------------------------------------------------------------------------------
+ */
+static void mdlTerminate(SimStruct *S) {}
+
+#ifdef MATLAB_MEX_FILE
+#include "simulink.c"
+#else
+#include "cg_sfun.h"
+#endif

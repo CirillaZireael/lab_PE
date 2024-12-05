@@ -1,0 +1,25 @@
+void outerControlLoop(float PSI_R, float nNom, float nM, double *iSd, double *iSq) {
+    // Calculation of the flux and speed error
+    float ePSI = PSI_R - PSI_R;
+    float eN = nNom - nM;
+
+    // Flux current control
+    float i_d = FC_KP * ePSI + ePSI_old * (FC_KI / f_a - FC_KP) + FC_KAW / f_a * (i_d_limit_old - i_d_old) + i_d_old;
+
+    // Speed control
+    float i_q = SC_KP * eN + eN_old * (SC_KI / f_a - SC_KP) + SC_KAW / f_a * (i_q_limit_old - i_q_old) + i_q_old;
+
+    // Apply current limits
+    i_d_limit = i_d;  // Add limit logic here
+    i_q_limit = i_q;
+
+    // Output assignments
+    *iSd = i_d_limit;
+    *iSq = i_q_limit;
+
+    // Update state variables
+    ePSI_old = ePSI;
+    eN_old = eN;
+    i_d_old = i_d;
+    i_q_old = i_q;
+}

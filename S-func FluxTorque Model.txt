@@ -1,0 +1,109 @@
+// filename: sfunc_fluxmodel.c
+/*-----------------------------------------------------------------------------------
+ * Purpose: Implements the flux-torque model for the ASM
+ *-----------------------------------------------------------------------------------
+ */
+
+// Inputs:
+* n_m: [1] (measured speed of ASM)
+* i_Sabc: [3] (vector of measured ASM phase currents)
+
+// Block parameters input:
+* f_a: [1] (sampling frequency)
+
+// Outputs:
+* gamma_psi_R_est: [1] (estimated angular velocity of flux)
+* Omega_psi_R_est: [1] (estimated angular velocity)
+* psi_RA_est: [1] (estimated flux)
+* m_a_est: [1] (estimated torque)
+
+// Compile command:
+mex sfunc_fluxmodel.c transformations.c fluxmodel.c
+
+/*-----------------------------------------------------------------------------------
+ * Defining global constants for the general S-function structure:
+ *-----------------------------------------------------------------------------------
+ */
+#define S_FUNCTION_NAME sfunc_fluxmodel
+#define S_FUNCTION_LEVEL 2
+
+#define NO_OF_PARAMETERS 1
+#define NO_OF_INPUTS 2
+#define NO_OF_OUTPUTS 4
+
+#define f_a *(mxGetPr(ssGetSFcnParam(S, 0)))
+
+#include <stdio.h>
+#include <math.h>
+#include "simstruc.h"
+#include "definitions.h"
+#include "transformations.h"
+#include "fluxmodel.h"
+
+/*-----------------------------------------------------------------------------------
+ * Necessary function for the general S-function structure:
+ *-----------------------------------------------------------------------------------
+ */
+static void mdlInitializeSizes(SimStruct *S) {
+    if (ssGetNumSFcnParams(S) != NO_OF_PARAMETERS) return;
+
+    ssSetNumContStates(S, 0);
+    ssSetNumDiscStates(S, 0);
+
+    if (!ssSetNumInputPorts(S, NO_OF_INPUTS)) return;
+    ssSetInputPortWidth(S, 0, 1);
+    ssSetInputPortWidth(S, 1, 3);
+
+    if (!ssSetNumOutputPorts(S, NO_OF_OUTPUTS)) return;
+    ssSetOutputPortWidth(S, 0, 1);
+    ssSetOutputPortWidth(S, 1, 1);
+    ssSetOutputPortWidth(S, 2, 1);
+    ssSetOutputPortWidth(S, 3, 1);
+
+    ssSetNumSampleTimes(S, 1);
+}
+
+/*-----------------------------------------------------------------------------------
+ * Initialize sampling times for the S-function
+ *-----------------------------------------------------------------------------------
+ */
+static void mdlInitializeSampleTimes(SimStruct *S) {
+    ssSetSampleTime(S, 0, 1 / f_a);
+    ssSetOffsetTime(S, 0, 0);
+}
+
+/*-----------------------------------------------------------------------------------
+ * Compute outputs of the flux-torque model
+ *-----------------------------------------------------------------------------------
+ */
+static void mdlOutputs(SimStruct *S, int_T tid) {
+    // Outputs
+    real_T *gamma_psi_R_est = ssGetOutputPortRealSignal(S, 0);
+    real_T *Omega_psi_R_est = ssGetOutputPortRealSignal(S, 1);
+    real_T *psi_RA_est = ssGetOutputPortRealSignal(S, 2);
+    real_T *m_a_est = ssGetOutputPortRealSignal(S, 3);
+
+    // Inputs
+    InputRealPtrsType n_m = ssGetInputPortRealSignalPtrs(S, 0);
+    InputRealPtrsType i_Sabc = ssGetInputPortRealSignalPtrs(S, 1);
+
+    // Variables for dq-transformation
+    real_T i_Sa = *i_Sabc[0];
+    real_T i_Sb = *i_Sabc[1];
+    real_T i_Sc = *i_Sabc[2];
+
+    // Call flux-torque model
+    fluxmodel(i_Sa, i_Sb, i_Sc, *n_m[0], gamma_psi_R_est, Omega_psi_R_est, psi_RA_est, m_a_est);
+}
+
+/*-----------------------------------------------------------------------------------
+ * Terminate the S-function (no memory to free in this implementation)
+ *-----------------------------------------------------------------------------------
+ */
+static void mdlTerminate(SimStruct *S) {}
+
+#ifdef MATLAB_MEX_FILE
+#include "simulink.c"
+#else
+#include "cg_sfun.h"
+#endif

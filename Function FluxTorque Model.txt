@@ -1,0 +1,29 @@
+void fluxmodel(float i_Sd, float i_Sq, float n_m, 
+               double *gamma_psi_R_est, double *Omega_psi_R_est, 
+               double *psi_RA_est, double *m_a_est) {
+    // Constants
+    const float L_s = 0.1;     // Stator inductance (H)
+    const float R_s = 0.01;    // Stator resistance (Ohms)
+    const float p = 2;         // Number of pole pairs
+    const float psi_PM = 0.05; // Permanent magnet flux linkage (Wb)
+
+    // Intermediate variables
+    float psi_d, psi_q, T_e;
+
+    // Calculate d-q axis flux linkages
+    psi_d = L_s * i_Sd + psi_PM;
+    psi_q = L_s * i_Sq;
+
+    // Calculate torque
+    T_e = (3.0 / 2.0) * p * (psi_d * i_Sq - psi_q * i_Sd);
+
+    // Calculate angular velocities
+    *Omega_psi_R_est = n_m * 2 * M_PI / 60; // Mechanical angular velocity (rad/s)
+    *gamma_psi_R_est = atan2(psi_q, psi_d); // Flux angle (rad)
+
+    // Calculate flux magnitude
+    *psi_RA_est = sqrt(psi_d * psi_d + psi_q * psi_q);
+
+    // Assign torque estimate
+    *m_a_est = T_e;
+}
