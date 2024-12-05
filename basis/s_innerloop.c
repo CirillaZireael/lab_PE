@@ -35,7 +35,7 @@ Date:    ID:   Description:
 #define S_FUNCTION_LEVEL 2
 
 
-#define NO_OF_PARAMETERS     6
+#define NO_OF_PARAMETERS     7
 #define NO_OF_INPUTS         3
 #define NO_OF_INPUTS_PORT0   2    // idq_ref refrence current for dq axis 
 #define NO_OF_INPUTS_PORT1   3    // i_abc feedback current in abc frame
@@ -55,7 +55,7 @@ Date:    ID:   Description:
 #define cc_kaw       *(mxGetPr(ssGetSFcnParam(S,3)))         // parameter Kaw for antiwindup
 #define u_max       *(mxGetPr(ssGetSFcnParam(S,4)))         // voltage limit
 #define cc_ki       *(mxGetPr(ssGetSFcnParam(S,5)))         // parameter Ki for current loop
-
+#define i_max       *(mxGetPr(ssGetSFcnParam(S,6)))         // parameter Ki for current loop
 // Konstanten definieren
 
 #include <stdio.h>
@@ -64,6 +64,8 @@ Date:    ID:   Description:
 
 // ----------------------- Eigene Funktionen einbinden ----------------------
 #include "innerloop.h"
+//#include "outerloop.h"
+
 
 // ----------------------- Initialisierung  ----------------------
 static void mdlInitializeSizes(SimStruct *S)
@@ -148,6 +150,7 @@ static void mdlOutputs(SimStruct *S, int_T tid)
     double psi_Rd = *data[1];
     double n_M = *data[2];
    //innnerloop output - d axis voltage  
+    
    innerloop(*idq_ref,cc_kp,cc_ki,v_output,u_max,cc_kaw,gamma,*i_abc,psi_Rd,n_M);
    out_svm[0] = v_output[0];
    out_svm[1] = v_output[1];

@@ -19,10 +19,18 @@ double ASM_Lh;
 double ASM_Lr;
 double ASM_sigma;
 double ASM_Ls;
+double fc_kp=5.325005156765676e+02;
+double fc_ki=2.062706270627063e+03;
+double fc_kaw=3.873623048057136;
+double sc_kp = 0.208653263285512;
+double sc_ki = 3.477554388091871;
+double sc_kaw = 16.666666666666668;
 
 
 PI_ControllerState id_ControllerState;
 PI_ControllerState iq_ControllerState;
+PI_ControllerState flux_ControllerState;
+PI_ControllerState speed_ControllerState;
 
 
 void init_var(float fsa);
@@ -45,7 +53,25 @@ void init_var_svm()
      ASM_Lr = 0.4131;
      ASM_sigma = 0.0433;
      ASM_Ls = 0.4131;
+     
+
     init_var(1/Ta);
+}
+
+float outerloop(double Psi_Rn,double Psi_R,
+                float i_max,double *idq_ref,
+                double n_ref,double n_M) {
+
+
+    double error = Psi_Rn - Psi_R;
+    idq_ref[0] =  PI_controller(error, fc_kp, fc_ki, -i_max, i_max, fc_kaw, &flux_ControllerState,0);
+    error = n_ref - n_M;
+    idq_ref[1] =  PI_controller(error, sc_kp, sc_ki, -i_max, i_max, sc_kaw, &speed_ControllerState,0);
+
+    //PI controller for q axis to be added, 
+    //may need struct to distinguish the integrator,error_last,output_last value of d and q axis 
+    return 0;
+
 }
 
 //  ----------------------------------------------------------------------

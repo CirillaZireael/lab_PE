@@ -19,10 +19,17 @@ double ASM_Lh;
 double ASM_Lr;
 double ASM_sigma;
 double ASM_Ls;
+double fc_kp=5.325005156765676e+02;
+double fc_ki=2.062706270627063e+03;
+double fc_kaw=3.873623048057136;
+double sc_kp = 0.208653263285512;
+double sc
 
 
 PI_ControllerState id_ControllerState;
 PI_ControllerState iq_ControllerState;
+PI_ControllerState flux_ControllerState;
+PI_ControllerState speed_ControllerState;
 
 
 void init_var(float fsa);
@@ -45,25 +52,46 @@ void init_var_svm()
      ASM_Lr = 0.4131;
      ASM_sigma = 0.0433;
      ASM_Ls = 0.4131;
+     
+
     init_var(1/Ta);
+}
+
+float outerloop(double Psi_Rn,double Psi_R,
+                float i_max,double *idq_ref,
+                double n_ref,double n_M) {
+
+
+    double error = Psi_Rn - Psi_R;
+    idq_ref[0] =  PI_controller(error, kp_flux, ki_flux, -i_max, i_max, KAW_flux, &flux_ControllerState,0);
+    error = n_ref - n_M;
+    idq_ref[1] =  PI_controller(error, kp_spd, ki_flux, -i_max, i_max, KAW_spd, &speed_ControllerState,0);
+
+    //PI controller for q axis to be added, 
+    //may need struct to distinguish the integrator,error_last,output_last value of d and q axis 
+    return 0;
+
 }
 
 //  ----------------------------------------------------------------------
 
 // Innerloop controller
 
-float innerloop(double *idq_ref, float kp, float ki, float *v_output, float u_max, float KAW,float gamma,double *i_abc) {
+float innerloop(double *idq_ref, float kp, float ki, 
+                float *v_output, float u_max, float KAW,float gamma,
+                double *i_abc,double Psi_Rd,double n_M) {
 
     double i_d_fdb, i_q_fdb;
     abc_dq_trans(i_abc[0], i_abc[1], i_abc[2],gamma, &i_d_fdb, &i_q_fdb); //park transformation
 
     double U_Sd_ent, U_Sq_ent;
-    decoupling(idq_ref[0],idq_ref[1],double Psi_Rd,double omega_M,&U_Sd_ent, double* U_Sq_ent);
+    double omega_M = n_M*2*PI/60;
+    decoupling(idq_ref[0],idq_ref[1],Psi_Rd,omega_M,&U_Sd_ent,&U_Sq_ent);
 
     double error = idq_ref[0] - i_d_fdb;
-    v_output[0] =  PI_controller(error, kp, ki, -u_max, u_max, KAW, &id_ControllerState);
+    v_output[0] =  PI_controller(error, kp, ki, -u_max, u_max, KAW, &id_ControllerState,U_Sd_ent);
     error = idq_ref[1] - i_q_fdb;
-    v_output[1] =  PI_controller(error, kp, ki, -u_max, u_max, KAW, &iq_ControllerState);
+    v_output[1] =  PI_controller(error, kp, ki, -u_max, u_max, KAW, &iq_ControllerState,U_Sq_ent);
 
     //PI controller for q axis to be added, 
     //may need struct to distinguish the integrator,error_last,output_last value of d and q axis 
@@ -73,7 +101,7 @@ float innerloop(double *idq_ref, float kp, float ki, float *v_output, float u_ma
 
 // PI Controller function with anti-windup
 
-float PI_controller(float error, float kp, float ki, float output_min, float output_max, float KAW,PI_ControllerState *state) {
+float PI_controller(float error, float kp, float ki, float output_min, float output_max, float KAW,PI_ControllerState *state, double U_decoupling) {
 
     float output = 0;
 
@@ -92,7 +120,7 @@ float PI_controller(float error, float kp, float ki, float output_min, float out
 
     //----------decoupling-------------
 
-
+    output += U_decoupling;
 
     // -------Apply output limits------------
 
