@@ -151,12 +151,13 @@ static void mdlOutputs(SimStruct *S, int_T tid)
     double psi_Rd = *data[1];
     double n_M = *data[2];
     double Psi_Rn = 0.98;
+    //double i_d_o, i_q_o;
    //innnerloop output - d axis voltage  
    outerloop(Psi_Rn,psi_Rd,i_max,idq_ref,*n_ref[0],n_M);
    innerloop(idq_ref,cc_kp,cc_ki,v_output,u_max,cc_kaw,gamma,*i_abc,psi_Rd,n_M);
    out_svm[0] = v_output[0];
    out_svm[1] = v_output[1];
-
+   out_svm[2] = idq_ref[0];
 //=========================================================================================
 
 

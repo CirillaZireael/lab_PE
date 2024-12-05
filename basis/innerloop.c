@@ -82,17 +82,23 @@ float innerloop(double *idq_ref, float kp, float ki,
                 float *v_output, float u_max, float KAW,float gamma,
                 double *i_abc,double Psi_Rd,double n_M) {
 
+    //park transformation
     double i_d_fdb, i_q_fdb;
     abc_dq_trans(i_abc[0], i_abc[1], i_abc[2],gamma, &i_d_fdb, &i_q_fdb); //park transformation
 
+    //decoupling calculation
     double U_Sd_ent, U_Sq_ent;
     double omega_M = n_M*2*PI/60;
     decoupling(idq_ref[0],idq_ref[1],Psi_Rd,omega_M,&U_Sd_ent,&U_Sq_ent);
-
+    
+    //u_d calculation
     double error = idq_ref[0] - i_d_fdb;
     v_output[0] =  PI_controller(error, kp, ki, -u_max, u_max, KAW, &id_ControllerState,U_Sd_ent);
+    
+    //u_q calculation
     error = idq_ref[1] - i_q_fdb;
-    v_output[1] =  PI_controller(error, kp, ki, -u_max, u_max, KAW, &iq_ControllerState,U_Sq_ent);
+    double uq_max = u_max;//sqrt(u_max*u_max-v_output[0]*v_output[0]); //field weakening
+    v_output[1] =  PI_controller(error, kp, ki, -uq_max, uq_max, KAW, &iq_ControllerState,U_Sq_ent);
 
     //PI controller for q axis to be added, 
     //may need struct to distinguish the integrator,error_last,output_last value of d and q axis 
@@ -114,10 +120,22 @@ float PI_controller(float error, float kp, float ki, float output_min, float out
 
     state->integrator += ki * Ta * error;
 
+      /*  float integrator_max = 650;
+    
+    if (state->integrator > integrator_max) {
+
+        state->integrator = integrator_max;
+
+    } else if (state->integrator < -integrator_max) {
+
+        state->integrator = -integrator_max;
+
+    }*/
+
     // Combine proportional and integral terms
 
+    //output = kp * error + state->error_last * (-kp +(ki - (KAW*state->delta_output_last))*Ta) + state->output_last;
     output = proportional + state->integrator;
-
 
     //----------decoupling-------------
 
@@ -140,14 +158,17 @@ float PI_controller(float error, float kp, float ki, float output_min, float out
     // Anti-windup correction
 
     float feedback_correction = KAW * (output - output_limited);
-
     state->integrator -= feedback_correction * Ta;  // Adjust the integrator to prevent windup
+
+    
 
     // Update states
 
     state->output_last = output_limited;
 
     state->error_last = error;
+
+    state->delta_output_last = output-output_limited;
 
     return output_limited;
 
@@ -186,7 +207,8 @@ void abc_dq_trans(float in_a, float in_b, float in_c, float gamma, double *out_d
 }
 
 void decoupling(double I_d,double I_q,double Psi_Rd,double omega_M,double* U_Sd_ent, double* U_Sq_ent){
-     *U_Sd_ent = ASM_sigma * ASM_Ls * 
+     if (Psi_Rd == 0) Psi_Rd=0.000001;
+    *U_Sd_ent = ASM_sigma * ASM_Ls * 
                 (-ASM_p * omega_M * I_q - (ASM_Rr * ASM_Lh) / ASM_Lr / Psi_Rd * pow(I_q, 2)) 
                 - Psi_Rd * ASM_Rr * ASM_Lh / pow(ASM_Lr, 2);
 

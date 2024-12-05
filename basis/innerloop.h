@@ -18,6 +18,7 @@ typedef struct {
     float integrator;     // Integral term
     float output_last;    // Last output
     float error_last;     // Last error (if needed for derivative terms in full PID)
+    float delta_output_last;
 } PI_ControllerState;
 
 void init_var_svm();
