@@ -10,19 +10,15 @@
 // wird automatisch beim Simulationsstart aufgerufen
 // Parameter:
 
-float output_last;
-float error_last;
-float Ta;
-
 typedef struct {
     float integrator;     // Integral term
     float output_last;    // Last output
     float error_last;     // Last error (if needed for derivative terms in full PID)
 } PI_ControllerState;
 
-void init_var_svm();
-float PI_controller(float error, float kp, float ki, float output_min, float output_max, float KAW,PI_ControllerState *state, double U_decoupling);
-float innerloop(double *idq_ref, float kp, float ki, float *v_output, float output_max, float KAW,float gamma,double *i_abc,double Psi_Rd,double n_M);
+void init_var_outerloop();
 float outerloop(double Psi_Rn,double Psi_R,
-                float imax,double *idq_ref,
+                float kp_spd, float ki_spd, float KAW_spd,
+                float kp_flux, float ki_flux, float KAW_flux,
+                float i_max,double *idq_ref,
                 double n_ref,double n_M);
