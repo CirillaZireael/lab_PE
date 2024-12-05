@@ -59,14 +59,14 @@ void init_var_svm()
 }
 
 float outerloop(double Psi_Rn,double Psi_R,
-                float i_max,double *idq_ref,
+                float imax,double *idq_ref,
                 double n_ref,double n_M) {
 
 
     double error = Psi_Rn - Psi_R;
-    idq_ref[0] =  PI_controller(error, fc_kp, fc_ki, -i_max, i_max, fc_kaw, &flux_ControllerState,0);
+    idq_ref[0] =  PI_controller(error, fc_kp, fc_ki, -imax, imax, fc_kaw, &flux_ControllerState,0);
     error = n_ref - n_M;
-    idq_ref[1] =  PI_controller(error, sc_kp, sc_ki, -i_max, i_max, sc_kaw, &speed_ControllerState,0);
+    idq_ref[1] =  PI_controller(error, sc_kp, sc_ki, -imax, imax, sc_kaw, &speed_ControllerState,0);
 
     //PI controller for q axis to be added, 
     //may need struct to distinguish the integrator,error_last,output_last value of d and q axis 
